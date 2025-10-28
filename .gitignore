@@ -1,0 +1,53 @@
+
+
+# Arquivos de bytecode e otimização
+*.pyc
+__pycache__/
+
+# Ambiente virtual 
+venv/
+env/
+.venv/
+
+# Pacotes e resultados de instalação (pip, setuptools)
+build/
+dist/
+*.egg-info
+.tox/
+
+
+# ----------------------------------------------------------------------
+# Arquivos Específicos de Machine Learning e Dados
+# ----------------------------------------------------------------------
+
+# Dados (RAW e Processados)
+
+data/Raw/
+data/Processed/
+*.csv
+*.xls
+*.xlsx
+*.zip
+
+# Modelos treinados e artefatos de saída (pickle, h5, joblib)
+models/
+model_outputs/
+*.pkl
+*.joblib
+*.h5
+*.tf
+
+
+# ----------------------------------------------------------------------
+# Arquivos Específicos do Jupyter/IDE
+# ----------------------------------------------------------------------
+
+# Checkpoints do Jupyter Notebook (arquivos ocultos que o Jupyter cria)
+.ipynb_checkpoints/
+
+# Arquivos de configurações de IDEs
+.vscode/
+.idea/
+
+# Logs e arquivos de depuração
+*.log
