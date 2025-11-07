@@ -1,79 +1,99 @@
+# Projeto de Classificação Spotify Hits & Flops
 
+Este projeto utiliza técnicas de Machine Learning para prever se uma música, com base em suas características técnicas da API do Spotify, será um **"Hit" (1)** ou **"Flop" (0)**.
 
+O objetivo é construir um modelo de classificação robusto que possa auxiliar na tomada de decisões na indústria musical, identificando quais *features* (como dançabilidade, energia, loudness) são os preditores mais fortes de sucesso.
 
-# Projeto de Classificação de Sucesso Musical (Spotify Hits & Flops)
+## 📈 Metodologia e Pipeline do Projeto
 
-## 🎯 Visão Geral do Projeto
+O projeto foi estruturado seguindo as seguintes etapas:
 
-Este projeto foca no desenvolvimento de **modelos de classificação** de Machine Learning para prever a probabilidade de uma faixa musical se tornar um sucesso (**"Hit"**) ou um não-sucesso generalizado (**"Flop"**) no *mainstream*, com base em suas características técnicas.
+1.  **Coleta e Limpeza de Dados**:
+    * Os dados brutos (dos anos 90, 00 e 10) foram carregados da pasta `Data/Raw/`.
+    * Os conjuntos de dados foram concatenados.
+    * Foram removidas 173 duplicatas com base no nome da música (`track`) e artista (`artist`).
+    * O *dataset* final apresentou um excelente balanceamento de classes (50.2% Hits / 49.8% Flops).
 
-Busca-se não apenas criar um modelo preditivo robusto, mas também fornecer *insights* valiosos sobre o "DNA" técnico que impulsiona o sucesso musical na plataforma Spotify.
+2.  **Engenharia e Seleção de Features**:
+    * Uma análise de correlação foi realizada para identificar *features* com baixo poder preditivo.
+    * **Features Removidas (Ruído):** `liveness`, `tempo` e `speechiness` foram removidas por terem correlação próxima de zero com a variável alvo.
+    * **Feature Criada:** Com base na forte correlação negativa de `instrumentalness` (-0.47), foi criada a *feature* `is_vocal_track` (1 se `instrumentalness` < 0.01, 0 caso contrário) para ajudar o modelo a identificar explicitamente músicas cantadas.
 
+3.  **Pré-processamento**:
+    * Os dados foram divididos em conjuntos de treino (80%) e teste (20%).
+    * As *features* de treino e teste foram normalizadas usando `MinMaxScaler`.
 
-## Objetivo e Contexto
+4.  **Benchmark de Modelos (Baseline)**:
+    * Sete algoritmos de classificação foram treinados e avaliados usando Validação Cruzada (5-folds) para garantir robustez.
+    * O **Gradient Boosting** foi selecionado como o modelo campeão, apresentando a maior acurácia média (83.16%) e a maior estabilidade (menor desvio padrão).
 
-O cerne deste trabalho é a utilização de um *dataset* exclusivo, obtido a partir da **Web API do Spotify**, contendo diversas *features* técnicas por faixa.
+| Modelo | Acurácia Média (CV) | Desvio Padrão (CV) |
+| :--- | :---: | :---: |
+| **Gradient Boosting** | **0.8316** | 0.0076 |
+| XGBoost | 0.8234 | 0.0084 |
+| MLP Classifier | 0.8224 | 0.0056 |
+| Random Forest | 0.8132 | 0.0086 |
+| Decision Tree | 0.8025 | 0.0090 |
+| Logistic Regression | 0.7968 | 0.0060 |
+| KNN | 0.7904 | 0.0079 |
 
-### Variável Alvo (`Target`):
+5.  **Otimização de Hiperparâmetros (Tuning)**:
+    * O modelo campeão (Gradient Boosting) foi otimizado usando `RandomizedSearchCV` com foco em maximizar o `f1-score`.
+    * **Melhores Hiperparâmetros:** `{'n_estimators': 200, 'min_samples_leaf': 3, 'max_depth': 3, 'learning_rate': 0.05}`.
 
-  * **1 (Hit):** Faixa com alta probabilidade de sucesso generalizado ou popularidade no *mainstream*.
-  * **0 (Flop):** Faixa que, embora possa ser de alta qualidade, **provavelmente não alcançará popularidade generalizada** (não um sucesso de nicho ou não-popular).
+## Resultados Finais
 
-### Features Principais (Exemplos):
+O modelo final (Gradient Boosting Otimizado) foi avaliado no conjunto de teste, alcançando os seguintes resultados:
 
-`danceability`, `energy`, `valence`, `tempo`, `loudness`, `instrumentalness`, etc.
+* **Acurácia Geral**: 83%
+* **AUC (ROC Score)**: 0.9037 (Excelente capacidade de distinção)
 
+### Métricas para "Hit" (Classe 1):
+* **Recall: 89%**
+    * *Interpretação*: O modelo é excelente em "encontrar" os Hits. Ele identificou corretamente 89% de todas as músicas que foram de fato um sucesso.
+* **Precisão: 80%**
+    * *Interpretação*: Quando o modelo prevê que uma música será um "Hit", ele está correto 80% das vezes.
+* **F1-Score: 0.84**
 
+### Matriz de Confusão Final (Dados de Teste)
 
-##  Metodologia e Modelos
+| | Previsão: Flop (0) | Previsão: Hit (1) |
+| :--- | :---: | :---: |
+| **Real: Flop (0)** | **1321 (VN)** | 398 (FP) |
+| **Real: Hit (1)** | 185 (FN) | **1569 (VP)** |
 
-A análise segue um fluxo de trabalho padronizado, garantindo a reprodutibilidade e a robustez dos modelos:
+## 📂 Estrutura do Projeto
 
-1.  **Análise Exploratória de Dados (EDA):** Investigação de correlações (ex: `instrumentalness` vs. `target`), distribuições e *outliers* para guiar o *feature engineering*.
-2.  **Pré-processamento de Dados:** Normalização (`MinMaxScaler`) via **Pipeline** para garantir que a escala das *features* não influencie indevidamente modelos sensíveis à distância (KNN, Regressão Logística).
-3.  **Modelagem e Avaliação:** Treinamento e comparação dos seguintes algoritmos de classificação, com foco nas métricas de **Acurácia**, **Precisão** e **Recall** (sensibilidade):
-      * Regressão Logística
-      * K-Nearest Neighbors (KNN)
-      * Árvore de Decisão
-      * Random Forest
-      * Gradient Boosting
-
-
-
-##  Como Executar o Projeto Localmente
-
-Para replicar esta análise e treinar os modelos em sua máquina, siga os passos abaixo:
-
-### 1\. Requisitos
-
-Certifique-se de ter o Python 3.8+ instalado.
-
-Instale as bibliotecas necessárias usando o arquivo `requirements.txt`:
-
-```bash
-pip install -r requirements.txt
+```
+├── Data/
+│   ├── Raw/                # Dados brutos .csv
+│   └── Processed/          # Dados limpos .parquet
+├── Models/
+│   └── gradient_boosting.pkl # Modelo treinado (não versionado)
+├── src/
+│   └── spotifyhits_classification.ipynb  # Notebook principal
+├── app.py                  # (Opcional: Aplicação Streamlit/Flask)
+├── .gitignore
+├── README.md
+└── requirements.txt
 ```
 
-### 2\. Estrutura do Repositório
+## 🚀 Como Executar
 
-| Pasta/Arquivo | Conteúdo |
-| :--- | :--- |
-| `data/raw/` | Dataset original do Spotify (ex: `spotify_tracks.csv`). |
-| `notebooks/` | Documentação completa do projeto, EDA e Modelagem. |
-| `src/` | Funções auxiliares e Pipelines de pré-processamento (limpeza/transformação). |
-| `README.md` | Este arquivo. |
+1.  Clone este repositório:
+    ```bash
+    git clone [URL_DO_REPOSITORIO]
+    ```
+2.  (Recomendado) Crie e ative um ambiente virtual:
+    ```bash
+    python -m venv venv
+    source venv/bin/activate  # No Windows: venv\Scripts\activate
+    ```
+3.  Instale as dependências:
+    ```bash
+    pip install -r requirements.txt
+    ```
+4.  Abra e execute o notebook Jupyter localizado em:
+    `src/spotifyhits_classification.ipynb`
+```
 
-### 3\. Ordem de Execução
-
-1.  Abra o ambiente Jupyter (Lab/Notebook).
-2.  Execute os notebooks na pasta `notebooks/` na ordem numérica (ex: `1.0-EDA_Limpeza.ipynb` seguido de `2.0-Modelagem.ipynb`).
-
------
-
-## 🌟 Relevância para a Indústria
-
-Este projeto demonstra a aplicação prática de *data science* para:
-
-  * **Decisão de Produção:** Artistas e produtores podem otimizar *features* como `loudness` e `danceability` para aumentar o potencial *mainstream*.
-  * **Marketing Estratégico:** Entender quais atributos técnicos de uma faixa devem ser priorizados em campanhas de *playlisting*.
-  * **Validação de Negócios:** Mensurar o valor preditivo das *features* fornecidas pela API do Spotify.
