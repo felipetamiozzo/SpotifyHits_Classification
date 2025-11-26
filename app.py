@@ -3,124 +3,131 @@ import pandas as pd
 import joblib
 import os
 
-#Configuração da Página
+# --- Configuração Inicial ---
+# Define o título e ícone da aba do navegador
 st.set_page_config(
-    page_title="Previsor de Hits do Spotify",
-    page_icon="🎵",
-    layout="wide"
+    page_title="Previsor de Hits",
+    page_icon="🎵"
 )
 
-#Carregamento do modelo
-# Usamos @st.cache_resource para que o modelo seja carregado apenas uma vez.
+# Título principal na página
+st.title("🎵 Vai ser Hit ou Flop?")
+st.write("Descubra se sua música tem potencial para ser um sucesso no Spotify!")
+
+# --- Carregando o Modelo ---
+# Função simples para carregar o arquivo do modelo
+# Usamos cache para não carregar toda vez que mexer num botão
 @st.cache_resource
-def carregar_modelo():
-    """Carrega o pipeline de modelo salvo"""
-    
-    caminho_modelo = os.path.join('models', 'spotify_model_pipeline.pkl')
+def carregar_meu_modelo():
     try:
-        modelo = joblib.load(caminho_modelo)
-        return modelo
-    except FileNotFoundError:
-        st.error(f"Erro: Arquivo do modelo não encontrado em {caminho_modelo}")
-        return None
-    except Exception as e:
-        st.error(f"Erro ao carregar o modelo: {e}")
-        return None
+        # Tenta carregar da pasta 'models'
+        return joblib.load('models/spotify_model_pipeline.pkl')
+    except:
+        # Se não achar, tenta no diretório atual (comum em alguns deploys)
+        try:
+            return joblib.load('spotify_model_pipeline.pkl')
+        except:
+            return None
 
-modelo = carregar_modelo()
+modelo = carregar_meu_modelo()
 
-#Interface do usuário (Barra Lateral)
+# Se o modelo não carregou, para tudo e avisa
+if modelo is None:
+    st.error("⚠️ Erro: Não encontrei o arquivo do modelo. Verifique a pasta.")
+    st.stop()
 
-st.sidebar.title("Previsor de Hits do Spotify")
-st.sidebar.header("Insira as características da música:")
 
-def pegar_input_usuario():
-    """Cria os sliders e inputs na barra lateral para coletar os dados."""
+# --- Barra Lateral (Configurações) ---
+st.sidebar.header("🎛️ Características da Música")
+
+# Sliders para valores de 0 a 1
+danceability = st.sidebar.slider("Dançabilidade (0 a 1)", 0.0, 1.0, 0.7)
+energy = st.sidebar.slider("Energia (0 a 1)", 0.0, 1.0, 0.8)
+valence = st.sidebar.slider("Positividade (0 a 1)", 0.0, 1.0, 0.6)
+acousticness = st.sidebar.slider("Acústica (0 a 1)", 0.0, 1.0, 0.1)
+instrumentalness = st.sidebar.slider("Instrumental (0 a 1)", 0.0, 1.0, 0.0)
+
+st.sidebar.markdown("---") # Linha divisória
+
+# Inputs numéricos
+loudness = st.sidebar.number_input("Volume (dB - Negativo é mais baixo)", value=-5.0)
+duration_ms = st.sidebar.number_input("Duração (em milissegundos)", value=200000)
+chorus_hit = st.sidebar.number_input("Segundos até o refrão", value=30.0)
+
+# Valores padrão para o que não é tão importante
+key = 5
+mode = 1
+time_signature = 4
+sections = 10
+
+# Lógica automática para Vocal
+# Se instrumental for muito baixo (menor que 0.01), consideramos que tem vocal
+if instrumentalness < 0.01:
+    is_vocal_track = 1
+else:
+    is_vocal_track = 0
+
+# --- Botão e Previsão ---
+if st.button("Analisar Música 🚀", use_container_width=True):
     
-    #Sliders para features normalizadas (0.0 a 1.0)
-    danceability = st.sidebar.slider("Dançabilidade (Danceability)", 0.0, 1.0, 0.75, 0.01)
-    energy = st.sidebar.slider("Energia (Energy)", 0.0, 1.0, 0.8, 0.01)
-    acousticness = st.sidebar.slider("Acústica (Acousticness)", 0.0, 1.0, 0.1, 0.01)
-    instrumentalness = st.sidebar.slider("Instrumentalidade (Instrumentalness)", 0.0, 1.0, 0.0, 0.01)
-    valence = st.sidebar.slider("Valência (Positividade)", 0.0, 1.0, 0.6, 0.01)
-    
-    #Inputs numéricos para outras features
-    loudness = st.sidebar.number_input("Volume (Loudness, em dB)", -60.0, 5.0, -5.5, 0.1)
-    duration_ms = st.sidebar.number_input("Duração (em ms)", 30000, 1000000, 210000, 1000)
-    chorus_hit = st.sidebar.number_input("Início do Refrão (Chorus Hit)", 0.0, 300.0, 40.5, 0.1)
-    
-    #Selectbox/Inputs para features categóricas/discretas
-    key = st.sidebar.selectbox("Tom (Key)", list(range(12)), index=5)
-    mode = st.sidebar.selectbox("Modo (Mode - 1: Maior, 0: Menor)", [0, 1], index=1)
-    time_signature = st.sidebar.selectbox("Compasso (Time Signature)", [1, 2, 3, 4, 5], index=3)
-    sections = st.sidebar.number_input("Nº de Seções (Sections)", 1, 50, 10, 1)
-    
-    #A feature que você criou
-    is_vocal_track = st.sidebar.selectbox("É uma faixa vocal? (is_vocal_track)", [0, 1], index=1)
-
-    #Coleta os dados em um dicionário
-    dados = {
-        'danceability': danceability,
-        'energy': energy,
-        'key': key,
-        'loudness': loudness,
-        'mode': mode,
-        'acousticness': acousticness,
-        'instrumentalness': instrumentalness,
-        'valence': valence,
-        'duration_ms': duration_ms,
-        'time_signature': time_signature,
-        'chorus_hit': chorus_hit,
-        'sections': sections,
-        'is_vocal_track': is_vocal_track
+    # 1. Organizar os dados
+    dados_musica = {
+        'danceability': [danceability],
+        'energy': [energy],
+        'key': [key],
+        'loudness': [loudness],
+        'mode': [mode],
+        'acousticness': [acousticness],
+        'instrumentalness': [instrumentalness],
+        'valence': [valence],
+        'duration_ms': [duration_ms],
+        'time_signature': [time_signature],
+        'chorus_hit': [chorus_hit],
+        'sections': [sections],
+        'is_vocal_track': [is_vocal_track]
     }
+
+    # 2. Criar a tabela (DataFrame)
+    df_input = pd.DataFrame(dados_musica)
     
-    #Converte o dicionário em um DataFrame do Pandas
-    #O pipeline espera as colunas na MESMA ORDEM do X_train
-    colunas_ordenadas = [
-        'danceability', 'energy', 'key', 'loudness', 'mode', 'acousticness',
-        'instrumentalness', 'valence', 'duration_ms', 'time_signature',
-        'chorus_hit', 'sections', 'is_vocal_track'
+    # --- CORREÇÃO IMPORTANTE: Forçar a ordem das colunas ---
+    # O modelo precisa receber EXATAMENTE nessa ordem para funcionar
+    colunas_corretas = [
+        'danceability', 'energy', 'key', 'loudness', 'mode', 
+        'acousticness', 'instrumentalness', 'valence', 'duration_ms', 
+        'time_signature', 'chorus_hit', 'sections', 'is_vocal_track'
     ]
     
-    features = pd.DataFrame(dados, index=[0])
-    return features[colunas_ordenadas] #Garante a ordem correta
+    # Reorganiza as colunas para garantir
+    df_input = df_input[colunas_corretas]
 
-#Página Principal
-st.header("Seu Modelo em Ação")
-st.write("Use a barra lateral à esquerda para ajustar os parâmetros da música e veja a previsão do modelo em tempo real.")
+    # 3. Mostrando os dados na tela para conferir (Debug visual)
+    st.write("🔍 Dados enviados para o modelo (Verifique se a ordem faz sentido):")
+    st.dataframe(df_input)
 
-#Pega os dados da barra lateral
-input_df = pegar_input_usuario()
-
-#Mostra os dados inseridos (opcional)
-st.subheader("Características da Música Inserida:")
-st.dataframe(input_df, hide_index=True)
-
-#Previsão e Exibição do Resultado
-if modelo is not None:
-    if st.sidebar.button("Prever Sucesso!", type="primary"):
-        
-        #Faz a previsão (o pipeline cuida da normalização automaticamente)
+    # 4. Fazendo a previsão
+    if modelo is not None:
         try:
-            previsao = modelo.predict(input_df)
-            probabilidade = modelo.predict_proba(input_df)
-
-            prob_hit = probabilidade[0][1]
-            prob_flop = probabilidade[0][0]
-
-            st.subheader("Resultado da Previsão:")
-
-            if previsao[0] == 1:
-                st.success(f"**É UM HIT!** 🚀")
-                st.progress(prob_hit)
-                st.markdown(f"O modelo tem **{prob_hit*100:.2f}%** de certeza de que esta música é um Hit.")
+            # Pega a classe (0 ou 1)
+            resultado = modelo.predict(df_input)[0]
+            
+            # Pega a probabilidade (ex: 0.85)
+            proba = modelo.predict_proba(df_input)[0]
+            chance_hit = proba[1] # Probabilidade de ser classe 1 (Hit)
+            
+            st.markdown("---")
+            st.subheader("📊 Resultado da Análise")
+            
+            # Mostra a "nota" exata que o modelo deu
+            st.write(f"**Probabilidade de Sucesso calculada:** {chance_hit * 100:.2f}%")
+            st.progress(chance_hit)
+            
+            if resultado == 1:
+                st.success("### 🚀 Previsão: VAI SER HIT!")
+                st.balloons()
             else:
-                st.error(f"**É UM FLOP.** 💔")
-                st.progress(prob_flop)
-                st.markdown(f"O modelo tem **{prob_flop*100:.2f}%** de certeza de que esta música é um Flop.")
-        
+                st.error("### 📉 Previsão: Provável FLOP")
+                st.info("Dica: Tente aumentar a Dançabilidade e o Volume, e zerar o Instrumental.")
+                
         except Exception as e:
-            st.error(f"Ocorreu um erro durante a previsão: {e}")
-else:
-    st.error("Modelo não carregado. Verifique o caminho 'models/spotify_model_pipeline.pkl'")
+             st.error(f"Ocorreu um erro técnico na previsão: {e}")
