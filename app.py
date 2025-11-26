@@ -3,7 +3,7 @@ import pandas as pd
 import joblib
 import os
 
-# --- Configuração Inicial ---
+# Configuração Inicial 
 # Define o título e ícone da aba do navegador
 st.set_page_config(
     page_title="Previsor de Hits",
@@ -14,9 +14,9 @@ st.set_page_config(
 st.title("🎵 Vai ser Hit ou Flop?")
 st.write("Descubra se sua música tem potencial para ser um sucesso no Spotify!")
 
-# --- Carregando o Modelo ---
-# Função simples para carregar o arquivo do modelo
-# Usamos cache para não carregar toda vez que mexer num botão
+# Carregando o Modelo 
+# Função spara carregar o arquivo do modelo
+# Usar cache para não carregar toda vez que mexer num botão
 @st.cache_resource
 def carregar_meu_modelo():
     try:
@@ -31,13 +31,13 @@ def carregar_meu_modelo():
 
 modelo = carregar_meu_modelo()
 
-# Se o modelo não carregou, para tudo e avisa
+# Caso o modelo não carregar, parar tudo e avisar
 if modelo is None:
     st.error("⚠️ Erro: Não encontrei o arquivo do modelo. Verifique a pasta.")
     st.stop()
 
 
-# --- Barra Lateral (Configurações) ---
+# Barra Lateral (Configurações)
 st.sidebar.header("🎛️ Características da Música")
 
 # Sliders para valores de 0 a 1
@@ -67,7 +67,7 @@ if instrumentalness < 0.01:
 else:
     is_vocal_track = 0
 
-# --- Botão e Previsão ---
+#  Botão e Previsão 
 if st.button("Analisar Música 🚀", use_container_width=True):
     
     # 1. Organizar os dados
@@ -90,8 +90,8 @@ if st.button("Analisar Música 🚀", use_container_width=True):
     # 2. Criar a tabela (DataFrame)
     df_input = pd.DataFrame(dados_musica)
     
-    # --- CORREÇÃO IMPORTANTE: Forçar a ordem das colunas ---
-    # O modelo precisa receber EXATAMENTE nessa ordem para funcionar
+    
+    # O modelo precisa receber exatamente nessa ordem 
     colunas_corretas = [
         'danceability', 'energy', 'key', 'loudness', 'mode', 
         'acousticness', 'instrumentalness', 'valence', 'duration_ms', 
@@ -101,8 +101,8 @@ if st.button("Analisar Música 🚀", use_container_width=True):
     # Reorganiza as colunas para garantir
     df_input = df_input[colunas_corretas]
 
-    # 3. Mostrando os dados na tela para conferir (Debug visual)
-    st.write("🔍 Dados enviados para o modelo (Verifique se a ordem faz sentido):")
+    # 3. Mostrando os dados na tela  (Debug visual)
+    st.write("🔍 Dados enviados para o modelo:")
     st.dataframe(df_input)
 
     # 4. Fazendo a previsão
